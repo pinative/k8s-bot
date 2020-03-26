@@ -2,9 +2,9 @@ package ingress
 
 import (
 	"encoding/json"
+	"github.com/pinative/k8s-bot/helper"
+	"github.com/pinative/k8s-bot/pkg/service"
 	"github.com/rs/zerolog/log"
-	"k8s-bot/helper"
-	"k8s-bot/pkg/service"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
