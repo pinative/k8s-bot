@@ -2,7 +2,7 @@ package controller
 
 import (
 	"fmt"
-	"github.com/pinative/k8s-bot/helper"
+	"github.com/pinative/k8s-bot/pkg/helper"
 	"github.com/pinative/k8s-bot/pkg/ingress"
 	"github.com/rs/zerolog/log"
 	"k8s.io/api/core/v1"
@@ -38,7 +38,7 @@ func (c *ServiceController) Run(stopCh <-chan struct{}) {
 func (c *ServiceController) onAddFunc(obj interface{}) {
 	//svc := obj.(metav1.Object)
 	svc := obj.(*v1.Service)
-	flag := helper.AreNamespaceInWhiteList(svc.GetNamespace(), ExcludesNamespaceList)
+	flag := helper.AreNamespaceInExcludesList(svc.GetNamespace(), ExcludesNamespaceList)
 	if flag {
 		return
 	}
@@ -48,21 +48,17 @@ func (c *ServiceController) onAddFunc(obj interface{}) {
 		K8sClient: helper.GetClientset(),
 	}
 	_ = ing.UpsertIngress(svc, nil, c.informerFactory)
-	//ret, err := ingress.getIngresses(svc.Name, svc.Namespace, c.informerFactory)
-	//if err != nil {
-	//	return
-	//}
-	//
-	//annots := svc.GetAnnotations()
-	//aia := annots["pigo.network/allow-internet-access"]
-	//if annots["pigo.io/part-of"] == os.Getenv("ANNOT_PIGO_IO_PARTOF") && aia == "true" && !ingress.HasIngressExists(svc.GetName(), ret) {
-	//	ingress.CreateIngress(svc.Name, svc.Namespace, svc.Spec.Ports)
-	//}
 }
 
 func (c *ServiceController) onUpdateFunc(old, new interface{}) {
 	oldSvc := old.(*v1.Service)
 	newSvc := new.(*v1.Service)
+
+	flag := helper.AreNamespaceInExcludesList(oldSvc.Namespace, ExcludesNamespaceList)
+	if flag || newSvc.DeletionTimestamp != nil {
+		return
+	}
+
 	log.Printf("SERVICE %s/%s was UPDATED", newSvc.Namespace, newSvc.Name)
 	ing := ingress.Ingress{
 		K8sClient: helper.GetClientset(),
@@ -73,12 +69,20 @@ func (c *ServiceController) onUpdateFunc(old, new interface{}) {
 
 func (c *ServiceController) onDeleteFunc(obj interface{}) {
 	svc := obj.(*v1.Service)
-	if svc.Annotations["pigo.io/part-of"] == os.Getenv("ANNOT_PIGO_IO_PARTOF") {
+
+	flag := helper.AreNamespaceInExcludesList(svc.Namespace, ExcludesNamespaceList)
+	if flag {
+		return
+	}
+
+	if svc.Annotations["pigo.io/part-of"] == os.Getenv("ANNOT_PIGO_IO_PARTOF") &&
+		svc.Annotations["pigo.network/allow-internet-access"] == "true" {
+
 		log.Printf("SERVICE %s/%s was DELETED at %v", svc.Namespace, svc.Name, svc.DeletionTimestamp)
 		ing := ingress.Ingress{
-			K8sClient: helper.GetClientset(),
+			K8sClient:   helper.GetClientset(),
 			ServiceName: svc.Name,
-			Namespace: svc.Namespace,
+			Namespace:   svc.Namespace,
 		}
 		_ = ing.DeleteIngress()
 	}

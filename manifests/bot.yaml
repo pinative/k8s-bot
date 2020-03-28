@@ -1,0 +1,128 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: bot-config
+  namespace: kube-system
+data:
+  bot_env_file_path: /app
+  .env: |-
+    RESYNC_DURATION_IN_SECONDS=3600
+    BOT_SERVICE_PREFIX=svc-
+    BOT_INGRESS_PREFIX=ing-
+    ANNOT_PIGO_IO_PARTOF=k8s.bot
+    PUBLIC_DNS_DOMAIN=<YOUR DNS>
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: k8s-bot
+  namespace: kube-system
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: k8s-bot
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - services
+    verbs:
+      - get
+      - watch
+      - list
+      - create
+      - update
+      - delete
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+    verbs:
+      - get
+      - watch
+      - list
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups: ["networking.k8s.io"]
+    resources:
+      - ingresses
+    verbs:
+      - get
+      - watch
+      - list
+      - create
+      - update
+      - patch
+      - delete
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k8s-bot
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: k8s-bot
+subjects:
+  - kind: ServiceAccount
+    name: k8s-bot
+    namespace: kube-system
+
+---
+# See https://github.com/pinative/k8s-bot
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-bot
+  namespace: kube-system
+  labels:
+    k8s-app: k8s-bot
+spec:
+  # The bot can only have a single active instance.
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: k8s-bot
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      name: k8s-bot
+      namespace: kube-system
+      labels:
+        k8s-app: k8s-bot
+      annotations:
+        'pigo.io/part-of': 'k8s.bot'
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+        # Mark the pod as a critical add-on for rescheduling.
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+      serviceAccountName: k8s-bot
+      priorityClassName: system-cluster-critical
+      containers:
+        - name: k8s-bot
+          image: pinative/k8s-bot:v1.0.0
+          env:
+            - name: BOT_ENV_FILE_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: bot-config
+                  key: bot_env_file_path
+          volumeMounts:
+            - name: bot-config-volume
+              mountPath: /app
+      volumes:
+        - name: bot-config-volume
+          configMap:
+            name: bot-config

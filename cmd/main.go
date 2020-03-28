@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"github.com/pinative/k8s-bot/helper"
 	"github.com/pinative/k8s-bot/observer"
+	"github.com/pinative/k8s-bot/pkg/helper"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
@@ -12,6 +12,8 @@ import (
 )
 
 func main() {
+	helper.LoadEnvVariables()
+
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	runtime.ErrorHandlers = []func(error){
 		func(err error) { log.Warn().Err(err).Msg("[k8s]") },

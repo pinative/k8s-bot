@@ -1,7 +1,7 @@
 package controller
 
 var (
-	ExcludesNamespaceList = []string{"kube-system", "ingress-nginx", "kube-public", "monitor", "default"}
+	ExcludesNamespaceList = []string{ "kube-system", "ingress-nginx", "kube-public", "monitor" }
 )
 
 type BotController interface {

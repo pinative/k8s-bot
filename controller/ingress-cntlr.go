@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"github.com/pinative/k8s-bot/pkg/helper"
 	"github.com/rs/zerolog/log"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/informers"
@@ -34,12 +35,23 @@ func (c *IngressController) Run(stopCh <-chan struct{}) {
 
 func (c *IngressController) onAddFunc(obj interface{}) {
 	ing := obj.(*networkingv1beta1.Ingress)
+
+	flag := helper.AreNamespaceInExcludesList(ing.Namespace, ExcludesNamespaceList)
+	if flag {
+		return
+	}
+
 	log.Printf("INGRESS %s/%s was CREATED at %v", ing.Namespace, ing.Name, ing.CreationTimestamp)
 }
 
 func (c *IngressController) onUpdateFunc(old, new interface{}) {
 	oldIng := old.(*networkingv1beta1.Ingress)
 	newIng := new.(*networkingv1beta1.Ingress)
+
+	flag := helper.AreNamespaceInExcludesList(oldIng.Namespace, ExcludesNamespaceList)
+	if flag {
+		return
+	}
 
 	if oldIng == newIng {
 		log.Printf("INGRESS %s/%s was UPDATED.", oldIng.Namespace, oldIng.Name)
@@ -48,6 +60,12 @@ func (c *IngressController) onUpdateFunc(old, new interface{}) {
 
 func (c *IngressController) onDeleteFunc(obj interface{}) {
 	ing := obj.(*networkingv1beta1.Ingress)
+
+	flag := helper.AreNamespaceInExcludesList(ing.Namespace, ExcludesNamespaceList)
+	if flag {
+		return
+	}
+
 	log.Printf("INGRESS %s/%s was DELETED at %v", ing.Namespace, ing.Name, ing.DeletionTimestamp)
 }
 

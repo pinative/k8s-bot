@@ -3,6 +3,7 @@ package helper
 import (
 	"encoding/hex"
 	"encoding/json"
+	"github.com/joho/godotenv"
 	"github.com/rs/xid"
 	"github.com/rs/zerolog/log"
 	"k8s.io/client-go/kubernetes"
@@ -35,9 +36,9 @@ func GetRandomValue(n int32) string {
 	return hex.EncodeToString(b)
 }
 
-// AreNamespaceInWhiteList verifies if the provided label list
+// AreNamespaceInExcludesList verifies if the provided label list
 // is in the provided whitelist and returns true, otherwise false.
-func AreNamespaceInWhiteList(namespace string, whitelist []string) bool {
+func AreNamespaceInExcludesList(namespace string, whitelist []string) bool {
 	for _, ns := range whitelist {
 		if ns == namespace {
 			return true
@@ -53,6 +54,19 @@ func GetPublicDns() string {
 	}
 
 	return generateDNSPrefix() + "." + d
+}
+
+func LoadEnvVariables() {
+	p := os.Getenv("BOT_ENV_FILE_PATH")
+	if p != "" && !strings.HasSuffix(p, "/") {
+		p = p + "/"
+	}
+
+	err := godotenv.Load( p + ".env")
+
+	if err != nil {
+		log.Fatal().Msg("Error loading .env file")
+	}
 }
 
 func FormatJson(v interface{}) (formatted []byte) {

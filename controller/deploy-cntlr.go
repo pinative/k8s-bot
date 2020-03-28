@@ -2,7 +2,7 @@ package controller
 
 import (
 	"fmt"
-	"github.com/pinative/k8s-bot/helper"
+	"github.com/pinative/k8s-bot/pkg/helper"
 	"github.com/pinative/k8s-bot/pkg/service"
 	"github.com/rs/zerolog/log"
 	appsv1 "k8s.io/api/apps/v1"
@@ -39,7 +39,7 @@ func (c *DeploymentController) onAddFunc(obj interface{}) {
 	deploy := obj.(*appsv1.Deployment)
 	ns := deploy.Namespace
 
-	flag := helper.AreNamespaceInWhiteList(ns, ExcludesNamespaceList)
+	flag := helper.AreNamespaceInExcludesList(ns, ExcludesNamespaceList)
 	if flag {
 		return
 	}
@@ -51,12 +51,12 @@ func (c *DeploymentController) onUpdateFunc(old, new interface{}) {
 	oldDeploy := old.(*appsv1.Deployment)
 	newDeploy := new.(*appsv1.Deployment)
 
-	flag := helper.AreNamespaceInWhiteList(oldDeploy.GetNamespace(), ExcludesNamespaceList)
+	flag := helper.AreNamespaceInExcludesList(oldDeploy.GetNamespace(), ExcludesNamespaceList)
 	if flag {
 		return
 	}
 
-	log.Printf("DEPLOYMENT UPDATED. %s/%s", newDeploy.Namespace, newDeploy.Name)
+	log.Printf("DEPLOYMENT %s/%s was UPDATED", newDeploy.Namespace, newDeploy.Name)
 
 	if newDeploy.Annotations["pigo.io/part-of"] == os.Getenv("ANNOT_PIGO_IO_PARTOF") {
 		ol := oldDeploy.GetLabels()
@@ -71,7 +71,13 @@ func (c *DeploymentController) onUpdateFunc(old, new interface{}) {
 
 func (c *DeploymentController) onDeleteFunc(obj interface{}) {
 	deploy := obj.(*appsv1.Deployment)
-	log.Printf("DEPLOYMENT DELETED: %#v", deploy)
+
+	flag := helper.AreNamespaceInExcludesList(deploy.GetNamespace(), ExcludesNamespaceList)
+	if flag || deploy.DeletionTimestamp != nil {
+		return
+	}
+
+	log.Printf("DEPLOYMENT %s/%s was DELETED at %v", deploy.Namespace, deploy.Name, deploy.DeletionTimestamp)
 	if deploy != nil && deploy.Annotations["pigo.io/part-of"] == os.Getenv("ANNOT_PIGO_IO_PARTOF") {
 		l := deploy.GetLabels()
 		ns := deploy.GetNamespace()
