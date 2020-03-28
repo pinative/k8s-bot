@@ -7,7 +7,7 @@ will add more features over time, and any contributes and issues are welcome.
 ## To Deploy it onto your cluster
 
 ```bash 
-wget https://github.com/pinative/k8s-bot/manifests/bot.yaml
+wget https://raw.githubusercontent.com/pinative/k8s-bot/master/manifests/bot.yaml
 
 kubectl apply -f bot.yaml
 ```
@@ -16,7 +16,7 @@ kubectl apply -f bot.yaml
 
 ## To Delete it from your cluster
 
-`kubectl delete -f https://github.com/pinative/k8s-bot/manifests/bot.yaml`
+`kubectl delete -f https://raw.githubusercontent.com/pinative/k8s-bot/master/manifests/bot.yaml`
 
 ## Configurations
 
